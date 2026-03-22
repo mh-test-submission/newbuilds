@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+
+require_relative "../scanner"
+
+INVADER_FILES = [
+  File.join(__dir__, "..", "fixtures", "sample_invader_1.txt"),
+  File.join(__dir__, "..", "fixtures", "sample_invader_2.txt")
+].freeze
+
+if ARGV.empty?
+  warn("Usage: bin/scanner <input>")
+  exit(1)
+end
+
+class Scan
+  def initialize(input)
+    @frame = Grid.parse(File.read(input))
+    patterns = INVADER_FILES.map { |f| Grid.parse(File.read(f)) }
+    @scanner = Scanner.new(patterns: patterns, threshold: 0.5, similarity: Similarity::ForegroundWeighted)
+  end
+
+  def matches
+    @matches ||= @scanner.scan(@frame)
+  end
+
+  def to_s
+    out = String.new
+    if matches.empty?
+      out << "No invaders detected.\n"
+    else
+      out << "Detected #{matches.count} invader(s):\n\n"
+      matches.sort_by { |m| [m.y, m.x] }.each do |match|
+        out << "Possible match at (%d, %d) with %.0f%% confidence\n" % [match.x, match.y, match.score * 100]
+
+        region = @frame.subgrid(match.x, match.y, match.pattern.width, match.pattern.height)
+        col = match.pattern.width + 4
+
+        out << "#{"Pattern".ljust(col)}Radar\n"
+        (0...match.pattern.height).each do |i|
+          out << "#{match.pattern.data[i].ljust(col)}#{region.data[i]}\n"
+        end
+
+        out << "\n"
+      end
+    end
+
+    out
+  end
+end
+
+begin
+  puts(Scan.new(ARGV[0]).to_s)
+rescue Errno::ENOENT, Grid::ParseError => e
+  warn("Error: #{e.message}")
+  exit(1)
+end
