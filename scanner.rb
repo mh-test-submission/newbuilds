@@ -114,6 +114,8 @@ module Filters
       end
     end
 
+    # NOTE: My ruby autoformatter likes to format this code this way I didn't
+    # bother changing the default settings for the assignment.
     def self.overlaps?(a, b)
       a.x < b.x +
         b.pattern.width &&
